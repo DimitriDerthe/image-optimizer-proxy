@@ -15,6 +15,7 @@ console.log(new Date(Date.now()), 'ENV origin', process.env.ORIGIN)
 ////////////////////////////////////
 // Start HTTP Server
 const requestListener = async function (req, res) {
+
   let img_url = origin + req.url
   let processingStart = 0
   let processingEnd = 0
@@ -24,6 +25,7 @@ const requestListener = async function (req, res) {
   let contentLength = 0
   let data = null
   let params = {
+    origin: null,
     dpr: 1,
     q: 60,
     w: null,
@@ -41,6 +43,10 @@ const requestListener = async function (req, res) {
     params = parse.queryToJson(query)
   }
 
+  // Dynamic param origin
+  params.origin ? img_url = 'https://' + params.origin.replace('http://', '') + req.url : null
+
+  
   ////////////////////////////////////
   // Get image buffer from origin
   async function imageCrawling(url) {
