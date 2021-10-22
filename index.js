@@ -6,9 +6,11 @@ const sharp = require('sharp');
 
 ////////////////////////////////////
 // Server Settings
-const host = 'localhost'
+const host = '0.0.0.0'
 const port = 8080
 const origin = process.env.ORIGIN
+
+console.log(new Date(Date.now()), 'ENV origin', process.env.ORIGIN)
 
 ////////////////////////////////////
 // Start HTTP Server
@@ -23,7 +25,7 @@ const requestListener = async function (req, res) {
   let data = null
   let params = {
     dpr: 1,
-    q: 80,
+    q: 60,
     w: null,
     h: null,
     format: null,
@@ -60,7 +62,7 @@ const requestListener = async function (req, res) {
   async function imageProcessing(buffer, dpr, q, w, h, format){
     processingStart = Date.now()
     
-    q == 'auto' ? q = 80 : q = q
+    q == 'auto' ? q = 60 : q = q
 
     if (w || h) {
       w ? w = parseInt(w * dpr) : null
@@ -128,7 +130,7 @@ const requestListener = async function (req, res) {
 
     await imageCrawling(img_url)
       .then(async buffer => {
-        data = await imageProcessing(buffer, params.dpr || 1, params.q || 80, params.w || null, params.h || null, params.format || 'webp')
+        data = await imageProcessing(buffer, params.dpr || 1, params.q || 60, params.w || null, params.h || null, params.format || 'webp')
       })
       .catch(err => {
         
@@ -140,7 +142,7 @@ const requestListener = async function (req, res) {
 
     await imageCrawling(img_url)
       .then(async buffer => {
-        data = await imageProcessing(buffer, params.dpr || 1, params.q || 80, params.w || null, params.h || null, params.format || 'avif')
+        data = await imageProcessing(buffer, params.dpr || 1, params.q || 60, params.w || null, params.h || null, params.format || 'avif')
       })
       .catch(err => {
         
@@ -152,7 +154,7 @@ const requestListener = async function (req, res) {
 
     await imageCrawling(img_url)
       .then(async buffer => {
-        data = await imageProcessing(buffer, params.dpr || 1, params.q || 80, params.w || null, params.h || null, params.format || 'jpeg')
+        data = await imageProcessing(buffer, params.dpr || 1, params.q || 60, params.w || null, params.h || null, params.format || 'jpeg')
       })
       .catch(err => {
         
