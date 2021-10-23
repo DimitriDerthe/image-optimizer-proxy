@@ -10,7 +10,6 @@ var LRU = require("lru-cache")
               , dispose: function (key, n) { n.close() }
               , maxAge: 1000 * 60 * 60 }
   , cache = new LRU(options)
-  , otherCache = new LRU(50)
 
 ////////////////////////////////////
 // Server Settings
@@ -46,7 +45,7 @@ const requestListener = async function (req, res) {
     negate: false
   }
 
-  if(img_url.includes('favicon.ico')) {
+  if(img_url.includes('*favicon.ico*')) {
     res.writeHead(302);
     res.end();
   }
