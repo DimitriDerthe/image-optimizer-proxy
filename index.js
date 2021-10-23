@@ -4,6 +4,14 @@ const parse = require('query-to-json')
 const axios = require('axios');
 const sharp = require('sharp');
 
+var LRU = require("lru-cache")
+  , options = { max: 2000
+              , length: function (n, key) { return n * 2 + key.length }
+              , dispose: function (key, n) { n.close() }
+              , maxAge: 1000 * 60 * 60 }
+  , cache = new LRU(options)
+  , otherCache = new LRU(50)
+
 ////////////////////////////////////
 // Server Settings
 const host = '0.0.0.0'
@@ -38,6 +46,11 @@ const requestListener = async function (req, res) {
     negate: false
   }
 
+  if(img_url.includes('favicon.ico')) {
+    res.writeHead(302);
+    res.end();
+  }
+
   if (img_url.includes('?')){
     let query = img_url.split('?')[1]
     params = parse.queryToJson(query)
@@ -46,7 +59,21 @@ const requestListener = async function (req, res) {
   // Dynamic param origin
   params.origin ? img_url = 'https://' + params.origin.replace('http://', '') + req.url : null
 
-  
+  try {
+    data = await cache.get(img_url)
+
+    if(data != null) {
+      res.writeHead(200,{
+        'content-type': contentType,
+        'server-timing':`cache;desc="Cache HIT", origin_crawling; dur=${originEnd - originStart}, img_processing; dur=${processingEnd - processingStart}`
+      });
+      res.end(data);
+    }
+  }
+  catch(err) {
+    console.log(new Date(Date.now(), 'Image not cached'))
+  }
+
   ////////////////////////////////////
   // Get image buffer from origin
   async function imageCrawling(url) {
@@ -167,9 +194,11 @@ const requestListener = async function (req, res) {
       })
   }
 
+  cache.set(img_url, data)
+
   res.writeHead(200,{
     'content-type': contentType,
-    'server-timing':`origin_crawling; dur=${originEnd - originStart}, img_processing; dur=${processingEnd - processingStart}`
+    'server-timing':`cache;desc="Cache MISS", origin_crawling; dur=${originEnd - originStart}, img_processing; dur=${processingEnd - processingStart}`
   });
   res.end(data);
 };

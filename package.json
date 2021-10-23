@@ -11,6 +11,7 @@
   "dependencies": {
     "axios": "^0.23.0",
     "dotenv": "^10.0.0",
+    "lru-cache": "^6.0.0",
     "query-to-json": "^0.0.2",
     "sharp": "^0.29.2"
   }
