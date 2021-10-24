@@ -7,7 +7,6 @@ const sharp = require('sharp');
 var LRU = require("lru-cache")
   , options = { max: 2000
               , length: function (n, key) { return n * 2 + key.length }
-              , dispose: function (key, n) { n.close() }
               , maxAge: 1000 * 60 * 60 }
   , cache = new LRU(options)
 
@@ -45,11 +44,6 @@ const requestListener = async function (req, res) {
     negate: false
   }
 
-  if(img_url.includes('*favicon.ico*')) {
-    res.writeHead(302);
-    res.end();
-  }
-
   if (img_url.includes('?')){
     let query = img_url.split('?')[1]
     params = parse.queryToJson(query)
@@ -66,8 +60,53 @@ const requestListener = async function (req, res) {
         'content-type': contentType,
         'server-timing':`cache;desc="Cache HIT", origin_crawling; dur=${originEnd - originStart}, img_processing; dur=${processingEnd - processingStart}`
       });
-      res.end(data);
     }
+     else {
+      ////////////////////////////////////
+      //Content-type matrix
+      if (req.headers.accept.includes('image/webp') && params.format != 'avif'){
+        console.log(new Date(Date.now()),'Image to process:', img_url, 'webp')
+        contentType = `image/${params.format || 'webp'}`
+
+        await imageCrawling(img_url)
+          .then(async buffer => {
+            data = await imageProcessing(buffer, params.dpr || 1, params.q || 60, params.w || null, params.h || null, params.format || 'webp')
+          })
+          .catch(err => {
+            
+          })
+      }
+      else if (req.headers.accept.includes('image/avif')){
+        console.log(new Date(Date.now()),'Image to process:', img_url, 'avif')
+        contentType = `image/${params.format || 'avif'}`
+
+        await imageCrawling(img_url)
+          .then(async buffer => {
+            data = await imageProcessing(buffer, params.dpr || 1, params.q || 60, params.w || null, params.h || null, params.format || 'avif')
+          })
+          .catch(err => {
+            
+          })
+      }
+      else {
+        console.log(new Date(Date.now()),'Image to process:', img_url, 'jpeg')
+        contentType = `image/${params.format || 'jpeg'}`
+
+        await imageCrawling(img_url)
+          .then(async buffer => {
+            data = await imageProcessing(buffer, params.dpr || 1, params.q || 60, params.w || null, params.h || null, params.format || 'jpeg')
+          })
+          .catch(err => {
+            
+          })
+      }
+
+      cache.set(img_url, data)
+      res.writeHead(200,{
+        'content-type': contentType,
+        'server-timing':`cache;desc="Cache MISS", origin_crawling; dur=${originEnd - originStart}, img_processing; dur=${processingEnd - processingStart}`
+      });
+     }
   }
   catch(err) {
     console.log(new Date(Date.now(), 'Image not cached'))
@@ -154,51 +193,6 @@ const requestListener = async function (req, res) {
 
   }
 
-  ////////////////////////////////////
-  //Content-type matrix
-  if (req.headers.accept.includes('image/webp') && params.format != 'avif'){
-    console.log(new Date(Date.now()),'Image to process:', img_url, 'webp')
-    contentType = `image/${params.format || 'webp'}`
-
-    await imageCrawling(img_url)
-      .then(async buffer => {
-        data = await imageProcessing(buffer, params.dpr || 1, params.q || 60, params.w || null, params.h || null, params.format || 'webp')
-      })
-      .catch(err => {
-        
-      })
-  }
-  else if (req.headers.accept.includes('image/avif')){
-    console.log(new Date(Date.now()),'Image to process:', img_url, 'avif')
-    contentType = `image/${params.format || 'avif'}`
-
-    await imageCrawling(img_url)
-      .then(async buffer => {
-        data = await imageProcessing(buffer, params.dpr || 1, params.q || 60, params.w || null, params.h || null, params.format || 'avif')
-      })
-      .catch(err => {
-        
-      })
-  }
-  else {
-    console.log(new Date(Date.now()),'Image to process:', img_url, 'jpeg')
-    contentType = `image/${params.format || 'jpeg'}`
-
-    await imageCrawling(img_url)
-      .then(async buffer => {
-        data = await imageProcessing(buffer, params.dpr || 1, params.q || 60, params.w || null, params.h || null, params.format || 'jpeg')
-      })
-      .catch(err => {
-        
-      })
-  }
-
-  cache.set(img_url, data)
-
-  res.writeHead(200,{
-    'content-type': contentType,
-    'server-timing':`cache;desc="Cache MISS", origin_crawling; dur=${originEnd - originStart}, img_processing; dur=${processingEnd - processingStart}`
-  });
   res.end(data);
 };
 
