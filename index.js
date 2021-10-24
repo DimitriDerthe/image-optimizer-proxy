@@ -28,9 +28,10 @@ const requestListener = async function (req, res) {
   let originStart = 0
   let originEnd = 0
   let contentType = ''
-  let contentLength = 0
   let data = null
+  let default_ttl = 1000 * 60 * 60
   let params = {
+    ttl: default_ttl,
     origin: null,
     dpr: 1,
     q: 60,
@@ -58,6 +59,8 @@ const requestListener = async function (req, res) {
     if(data != null) {
       res.writeHead(200,{
         'content-type': contentType,
+        'Cache-Control': `public`,
+        'Cache-Control': `max-age=${parseInt(params.ttl) || default_ttl }`,
         'server-timing':`cache;desc="Cache HIT", origin_crawling; dur=${originEnd - originStart}, img_processing; dur=${processingEnd - processingStart}`
       });
     }
@@ -101,9 +104,11 @@ const requestListener = async function (req, res) {
           })
       }
 
-      cache.set(img_url, data)
+      cache.set(img_url, data, parseInt(params.ttl))
       res.writeHead(200,{
         'content-type': contentType,
+        'Cache-Control': `public`,
+        'Cache-Control': `max-age=${params.ttl || default_ttl }`,
         'server-timing':`cache;desc="Cache MISS", origin_crawling; dur=${originEnd - originStart}, img_processing; dur=${processingEnd - processingStart}`
       });
      }
